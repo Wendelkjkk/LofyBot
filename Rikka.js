@@ -791,7 +791,7 @@ break
 case 'delete': case 'del': {
 if (!m.quoted) throw false
 let { chat, fromMe, id, isBaileys } = m.quoted
-if (!isBaileys) throw 'Pesan tersebut bukan dikirim oleh bot!'
+if (!isBaileys) throw 'A mensagem não foi enviada por um bot!'
 rikka.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: true, id: m.quoted.id, participant: m.quoted.sender } })
 }
 break
