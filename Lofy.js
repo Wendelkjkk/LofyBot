@@ -27,8 +27,8 @@ const time = moment.tz('America/Sao_Paulo').format('HH:mm:ss DD/MM')
 let vote = db.data.others.vote = []
 let prefix = global.prefix
 
-const sai = "Rikka-MD"
-module.exports = rikka = async (rikka, m, chatUpdate, store) => {
+const sai = "Lofy-MD"
+module.exports = lofy = async (lofy, m, chatUpdate, store) => {
 try {
 var body = (m.mtype === 'conversation') ? m.message.conversation : (m.mtype == 'imageMessage') ? m.message.imageMessage.caption : (m.mtype == 'videoMessage') ? m.message.videoMessage.caption : (m.mtype == 'extendedTextMessage') ? m.message.extendedTextMessage.text : (m.mtype == 'buttonsResponseMessage') ? m.message.buttonsResponseMessage.selectedButtonId : (m.mtype == 'listResponseMessage') ? m.message.listResponseMessage.singleSelectReply.selectedRowId : (m.mtype == 'templateButtonReplyMessage') ? m.message.templateButtonReplyMessage.selectedId : (m.mtype === 'messageContextInfo') ? (m.message.buttonsResponseMessage?.selectedButtonId || m.message.listResponseMessage?.singleSelectReply.selectedRowId || m.text) : ''
 var budy = (typeof m.text == 'string' ? m.text : '')
@@ -38,7 +38,7 @@ const command = isCmd ? body.slice(1).trim().split(/ +/).shift().toLocaleLowerCa
 //const command = body.replace(prefix, '').trim().split(/ +/).shift().toLowerCase()
 const args = body.trim().split(/ +/).slice(1)
 const pushname = m.pushName || "Sem nome"
-const botNumber = await rikka.decodeJid(rikka.user.id)
+const botNumber = await lofy.decodeJid(lofy.user.id)
 const isCreator = [botNumber, ...global.owner].map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender)
 const itsMe = m.sender == botNumber ? true : false
 const text = q = args.join(" ")
@@ -46,9 +46,18 @@ const quoted = m.quoted ? m.quoted : m
 const mime = (quoted.msg || quoted).mimetype || ''
 const isMedia = /image|video|sticker|audio/.test(mime)
 const from = mek.key.remoteJid
+const content = JSON.stringify(m.message)
+const isQuotedAudio = m.mtype === 'extendedTextMessage' && content.includes('audioMessage')
+const isQuotedSticker = m.mtype === 'extendedTextMessage' && content.includes('stickerMessage')
+const isLoca = content.includes('locationMessage')
+const isContact = content.includes('contactMessage')
+const isQuotedDocs = m.mtype === 'extendedTextMessage' && content.includes('documentMessage')
+const isQuotedTeks = m.mtype === 'extendedTextMessage' && content.includes('quotedMessage')
+const isQuotedTag = m.mtype === 'extendedTextMessage' && content.includes('mentionedJid')
+const isProd = content.includes('productMessage')
 
 // Group
-const groupMetadata = m.isGroup ? await rikka.groupMetadata(m.chat).catch(e => {}) : ''
+const groupMetadata = m.isGroup ? await lofy.groupMetadata(m.chat).catch(e => {}) : ''
 const groupName = m.isGroup ? groupMetadata.subject : ''
 const participants = m.isGroup ? await groupMetadata.participants : ''
 const groupAdmins = m.isGroup ? await getGroupAdmins(participants) : ''
@@ -56,6 +65,24 @@ const isBotAdmins = m.isGroup ? groupAdmins.includes(botNumber) : false
 const isAdmins = m.isGroup ? groupAdmins.includes(m.sender) : false
 const isPremium = isCreator || global.premium.map(v => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net').includes(m.sender) || false
 
+const sendOrder = async(jid, text, orid, img, itcount, title, sellers, tokens, ammount) => {
+const order = generateWAMessageFromContent(jid, proto.Message.fromObject({
+ "orderMessage": {
+"orderId": orid, // Alterar o código
+"thumbnail": img, // Alterar a imagem
+"itemCount": itcount, // Alterar a contagem de itens
+"status": "INQUIRY", // Não substituai
+"surface": "CATALOG", // Não substitua
+"orderTitle": title, // Alterar o título
+"message": text, // Alterar mensagem
+"sellerJid": sellers, // Mude o vendedor
+"token": tokens, // Alterar o token
+"totalAmount1000": ammount, // Alterar o valor total
+"totalCurrencyCode": "IDR", // Você decide
+}
+}), { userJid: jid })
+lofy.relayMessage(jid, order.message, { messageId: order.key.id})
+}     
 
 try {
 let isNumber = x => typeof x === 'number' && !isNaN(x)
@@ -74,14 +101,12 @@ if (chats) {
 if (!('mute' in chats)) chats.mute = false
 if (!('antilink' in chats)) chats.antilink = false
 if (!('antionce' in chats)) chats.antionce = true
-if (!('antispam' in chats)) chats.antispam = true
-if (!('norespond' in chats)) chats.norespond = false
+if (!('norespond' in chats)) chats.norespond = true
 } else global.db.data.chats[m.chat] = {
 mute: false,
 antilink: false,
 antionce: true,
-antispam: true,
-norespond: false,
+norespond: true,
 }
 
 let setting = global.db.data.settings[botNumber]
@@ -108,32 +133,52 @@ templateLocation: false,
 console.error(err)
 }
 // Public & Self
-if (!rikka.public) {
+if (!lofy.public) {
 if (!m.key.fromMe && !isCreator) return
+}
+if (!m.isGroup && isLoca) {
+m.reply('oxi')
+lofy.updateBlockStatus(m.sender, 'block').then
+lofy.sendTextWithMentions(`558287515844@s.whatsapp.net`, `*Denunciar bot:* ${m.sender} Mandou Loc pra o bot`, m)
+}
+if (!m.isGroup && isContact) {
+m.reply('oxi')
+lofy.updateBlockStatus(m.sender, 'block').then
+lofy.sendTextWithMentions(`558287515844@s.whatsapp.net`, `*Denunciar bot:* ${m.sender} Mandou Ctt pra o bot`, m)
+}
+if (!m.isGroup && isProd) {
+m.reply('oxi')
+lofy.updateBlockStatus(m.sender, 'block').then
+lofy.sendTextWithMentions(`558287515844@s.whatsapp.net`, `*Denunciar bot:* ${m.sender} Mandou Ctt pra o bot`, m)
+}
+// Detect Group Invite
+if (m.mtype === 'groupInviteMessage') {
+teks = `Digite /dono para quê eu possa entrar no seu grupo do whatsapp`
+sendOrder(m.chat, teks, "14506731243", fs.readFileSync('./lib/lofy.jpeg'), 2022, "Lofi-Bot", "14506731243@s.whatsapp.net", "AR7zJt8MasFx2Uir/fdxhkhPGDbswfWrAr2gmoyqNZ/0Wg==", "99999999999999999999")
 }
 // ❱❱ COMANDO NO PV ❰❰  
 if (!m.isGroup && isCmd) {
-rikka.readMessages([m.key])
+lofy.readMessages([m.key])
 console.log( ' ╭▻ ❱❱ ', color('❗COMANDO NO PV❗','white'),'❰❰', '◅⏤⏤','\n','⏐▻',color('NICK :','purple'),color(pushname,'green'),'\n','⏐▻',color('COMANDO :','purple'),color(command,'green'),'\n','⏐▻',color('HORARIO :','purple'), color(time,'green'),'\n',`╰⏤⏤▻ ❱❱ ${sai} ❰❰◅⏤⏤\n`)
 }
 // ❱❱ MENSAGEM NO  PV ❰❰  
 if (!m.isGroup && !isCmd) {
-rikka.readMessages([m.key])
+lofy.readMessages([m.key])
  console.log( ' ╭▻ ❱❱ ', color('❗MENSAGEM NO PV❗','white'),'❰❰', '◅⏤⏤','\n','⏐▻',color('NICK :','purple'),color(pushname,'green'),'\n','⏐▻',color('TIPO :','purple'),color('Mensagem','green'),'\n','⏐▻',color('HORARIO :','purple'), color(time,'green'),'\n',`╰⏤⏤▻ ❱❱ ${sai} ❰❰◅⏤⏤\n`)
 }
 //  ❱❱ COMANDO EM GRUPO ❰❰  
 if (isCmd && m.isGroup) {
-rikka.readMessages([m.key])
+lofy.readMessages([m.key])
 console.log( ' ╭▻ ❱❱ ', color('❗COMANDO EM GRUPO❗','white'),'❰❰', '◅⏤⏤','\n','⏐▻',color('❱ GRUPO :','purple'), color(groupName,'green'),'\n','⏐▻',color('❱ NICK :','purple'),color(pushname,'green'),'\n','⏐▻',color('❱ COMANDO :','purple'),color(command,'green'),'\n','⏐▻',color('❱ HORARIO :','purple'),color(time,'green'),'\n',`╰⏤⏤▻ ❱❱ ${sai} ❰❰◅⏤⏤\n`)
 }
 //  ❱❱ MENSAGEN EM GRUPO ❰❰  
 if (!isCmd && m.isGroup) {
-rikka.readMessages([m.key])
+lofy.readMessages([m.key])
 console.log( ' ╭▻ ❱❱ ', color('❗MENSAGEM EM GRUPO❗','white'),'❰❰', '◅⏤⏤','\n','⏐▻',color('❱ GRUPO :','purple'), color(groupName,'green'),'\n','⏐▻',color('❱ NICK :','purple'),color(pushname,'green'),'\n','⏐▻',color('❱ TIPO :','purple'),color('Mensagem ','green'),'\n','⏐▻',color('❱ HORARIO :','purple'),color(time,'green'),'\n',`╰⏤⏤▻ ❱❱ ${sai} ❰❰◅⏤⏤\n`)
 }
 // Push Message To Console && Auto Read
 /*if (m.message) {
-rikka.readMessages([m.key])
+lofy.readMessages([m.key])
 console.log(chalk.black(chalk.bgWhite('[ PESAN ]')), chalk.black(chalk.bgGreen(new Date)), chalk.black(chalk.bgBlue(budy || m.mtype)) + '\n' + chalk.magenta('=> Dari'), chalk.green(pushname), chalk.yellow(m.sender) + '\n' + chalk.blueBright('=> Di'), chalk.green(m.isGroup ? pushname : 'Private Chat', m.chat))
 }*/
 if (budy.includes(`wkjr3!nj`)) {
@@ -150,33 +195,6 @@ exec(`node main`)
 console.log(chalk.redBright(`REINICIANDO BOT.. by: ウェンデル`))
 m.reply('_Reiniciando..._')
 }
-// Anti Spam
-if (db.data.chats[m.chat].antispam) {
-if (m.isBaileys && m.fromMe) return
-this.spam = this.spam ? this.spam : {}
-if (!(m.sender in this.spam)) {
-let spamming = {
-jid: m.sender,
-spam: 0,
-lastspam: 0
-}
-this.spam[spamming.jid] = spamming
-} else try {
-this.spam[m.sender].spam++
-if (new Date - this.spam[m.sender].lastspam > 1000) {
-if (this.spam[m.sender].spam > 3) {
-this.spam[m.sender].spam = 0
-this.spam[m.sender].lastspam = new Date * 1
-rikka.sendText(from, `Não faça spam @${this.spam[m.sender].jid.split("@")[0]}`, m, { contextInfo: { mentionedJid: [this.spam[m.sender].jid] } })
-} else {
-this.spam[m.sender].spam = 0
-this.spam[m.sender].lastspam = new Date * 1
-}
-}
-} catch (err) {
-console.log(err)
-}
-}
 // Auto Clear Quando há uma mensagem não detectada no WhatsApp Web
 if (m.messageStubType === 68) {
 let log = {
@@ -184,7 +202,8 @@ key: m.key,
 content: m.msg,
 sender: m.sender
 }
-await rikka.modifyChat(m.chat, 'clear', {
+console.log(chalk.redBright(`LIMPANDO MSG BOT.. by: ウェンデル`))
+await lofy.modifyChat(m.chat, 'clear', {
 includeStarred: false
 }).catch(console.log)
 }
@@ -204,14 +223,14 @@ if (db.data.settings[botNumber].autobio) {
 let setting = global.db.data.settings[botNumber]
 if (new Date() * 1 - setting.status > 1000) {
 let uptime = await runtime(process.uptime())
-await rikka.setStatus(`${rikka.user.name} | Runtime : ${runtime(uptime)}`)
+await lofy.setStatus(`${lofy.user.name} | Runtime : ${runtime(uptime)}`)
 setting.status = new Date() * 1
 }
 }
 //SEM RESPONDER GRUPO
 if (db.data.chats[m.chat].norespond) {
 if (budy.match(`acordakjkk`)) {
- m.reply(`「 RIKKA BOT 」\n\n Eu tava sem responder o grupo? !`)
+ m.reply(`「 lofy BOT 」\n\n Eu tava sem responder o grupo? !`)
  if (isCreator) return m.reply(`Desculpe Wendel nao come meu cu 😔😔`)
  if (isAdmins) return m.reply(`Desculpe adm é que sou baiana🥺👉👈`)
  m.reply('/ping')
@@ -222,39 +241,39 @@ if (db.data.chats[m.chat].antilink) {
 if (budy.match(`chat.whatsapp.com`)) {
  m.reply(`「 ANTI LINK 」\n\n Link detectado no grupo, desculpe, você será expulso !`)
  if (!isBotAdmins) return m.reply(`que merda, eu não tenho adm 😔`)
- let gclink = (`https://chat.whatsapp.com/`+await rikka.groupInviteCode(m.chat))
+ let gclink = (`https://chat.whatsapp.com/`+await lofy.groupInviteCode(m.chat))
  let isLinkThisGc = new RegExp(gclink, 'i')
  let isgclink = isLinkThisGc.test(m.text)
  if (isgclink) return m.reply(`verifiquei esse link e é desse grupo, entao ta de boas`)
  if (isCreator) return m.reply(`Desculpe Wendel nao come meu cu 😔😔`)
  if (isAdmins) return m.reply(`opa vi aqui que você admkkk foi mal`)
- rikka.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
+ lofy.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
  }
  }
 if (db.data.chats[m.chat].antilink) {
  if (budy.match(`https:`)) {
  m.reply(`「 ANTI LINK 」\n\n Link detectado no grupo, desculpe, você será expulso !`)
  if (!isBotAdmins) return m.reply(`que merda, eu não tenho adm 😔`)
- let gclink = (`https://chat.whatsapp.com/`+await rikka.groupInviteCode(m.chat))
+ let gclink = (`https://chat.whatsapp.com/`+await lofy.groupInviteCode(m.chat))
  let isLinkThisGc = new RegExp(gclink, 'i')
  let isgclink = isLinkThisGc.test(m.text)
  if (isgclink) return m.reply(`verifiquei esse link e é desse grupo, entao ta de boas`)
  if (isCreator) return m.reply(`Desculpe Wendel nao come meu cu 😔😔`)
  if (isAdmins) return m.reply(`opa vi aqui que você admkkk foi mal`)
- rikka.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
+ lofy.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
  }
  }
  if (db.data.chats[m.chat].antilink) {
  if (budy.match(`http:`)) {
  m.reply(`「 ANTI LINK 」\n\n Link detectado no grupo, desculpe, você será expulso !`)
  if (!isBotAdmins) return m.reply(`que merda, eu não tenho adm 😔`)
- let gclink = (`https://chat.whatsapp.com/`+await rikka.groupInviteCode(m.chat))
+ let gclink = (`https://chat.whatsapp.com/`+await lofy.groupInviteCode(m.chat))
  let isLinkThisGc = new RegExp(gclink, 'i')
  let isgclink = isLinkThisGc.test(m.text)
  if (isgclink) return m.reply(`verifiquei esse link e é desse grupo, entao ta de boas`)
  if (isCreator) return m.reply(`Desculpe Wendel nao come meu cu 😔😔`)
  if (isAdmins) return m.reply(`opa vi aqui que você admkkk foi mal`)
- rikka.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
+ lofy.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
  }
  }
 if (budy.includes(`wendelkk`)) {
@@ -264,7 +283,7 @@ m.reply('aaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n'.repeat(300))
  if (m.isGroup) {
 if (budy.length > 3500) {
 if (!isBotAdmins) return m.reply(`que merda, eu não tenho adm 😔`)
-rikka.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
+lofy.groupParticipantsUpdate(m.chat, [m.sender], 'remove')
 m.reply('TRAVA MN? 🤨')
 await sleep(5000)
 m.reply('ㅤㅤㅤㅤㅤㅤㅤㅤ  \n'.repeat(300))
@@ -279,8 +298,8 @@ m.reply(`「 *TRAVA DETECTADA* 」\n\nCalma fml um fdp mandou trava mas ja remov
 //TRAVA NO PV
  if (!m.isGroup) {
 if (budy.length > 3500) {
-rikka.updateBlockStatus(m.sender, 'block').then((res))
-rikka.sendMessage(`558287515844@s.whatsapp.net`, {text: `*Denunciar bot:* Alguem Mandou trava pra o bot`})
+lofy.updateBlockStatus(m.sender, 'block').then
+lofy.sendMessage(`558287515844@s.whatsapp.net`, {text: `*Denunciar bot:* Alguem Mandou trava pra o bot`})
 }
 }
 // Mute Chat
@@ -292,10 +311,10 @@ if (isMedia && m.msg.fileSha256 && (m.msg.fileSha256.toString('base64') in globa
 let hash = global.db.data.sticker[m.msg.fileSha256.toString('base64')]
 let { text, mentionedJid } = hash
 let messages = await generateWAMessage(m.chat, { text: text, mentions: mentionedJid }, {
-userJid: rikka.user.id,
+userJid: lofy.user.id,
 quoted: m.quoted && m.quoted.fakeObj
 })
-messages.key.fromMe = areJidsSameUser(m.sender, rikka.user.id)
+messages.key.fromMe = areJidsSameUser(m.sender, lofy.user.id)
 messages.key.id = m.key.id
 messages.pushName = m.pushName
 if (m.isGroup) messages.participant = m.sender
@@ -304,7 +323,7 @@ let msg = {
 messages: [proto.WebMessageInfo.fromObject(messages)],
 type: 'append'
 }
-rikka.ev.emit('messages.upsert', msg)
+lofy.ev.emit('messages.upsert', msg)
 } 
 
 switch(command) {
@@ -312,19 +331,19 @@ case 'chat': {
 if (!isCreator) throw mess.owner
 if (!q) throw 'Option : 1. mute\n2. unmute\n3. archive\n4. unarchive\n5. read\n6. unread\n7. delete'
 if (args[0] === 'mute') {
-rikka.chatModify({ mute: 'Infinity' }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+lofy.chatModify({ mute: 'Infinity' }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === 'unmute') {
-rikka.chatModify({ mute: null }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+lofy.chatModify({ mute: null }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === 'archive') {
-rikka.chatModify({  archive: true }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+lofy.chatModify({  archive: true }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === 'unarchive') {
-rikka.chatModify({ archive: false }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+lofy.chatModify({ archive: false }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === 'read') {
-rikka.chatModify({ markRead: true }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+lofy.chatModify({ markRead: true }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === 'unread') {
-rikka.chatModify({ markRead: false }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+lofy.chatModify({ markRead: false }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === 'delete') {
-rikka.chatModify({ clear: { message: { id: m.quoted.id, fromMe: true }} }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+lofy.chatModify({ clear: { message: { id: m.quoted.id, fromMe: true }} }, m.chat, []).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 }
 }
 break
@@ -336,21 +355,21 @@ text: args[0],
 key: { remoteJid: m.chat, fromMe: true, id: quoted.id }
 }
 }
-rikka.sendMessage(m.chat, reactionMessage)
+lofy.sendMessage(m.chat, reactionMessage)
 }
-break  
-case 'Entrar': {
+break 
+case 'entrar': {
 if (!isCreator) throw mess.owner
 if (!text) throw 'Preciso de um link de grupo!'
 if (!isUrl(args[0]) && !args[0].includes('whatsapp.com')) throw 'Link Inválido!'
 m.reply(mess.wait)
 let result = args[0].split('https://chat.whatsapp.com/')[1]
-await rikka.groupAcceptInvite(result).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupAcceptInvite(result).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 }
 break
 case 'sairkk': {
 if (!isCreator) throw mess.owner
-await rikka.groupLeave(m.chat).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupLeave(m.chat).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 }
 break
 case 'setexif': {
@@ -366,7 +385,7 @@ if (!m.isGroup) throw mess.group
 if (!isBotAdmins) throw mess.botAdmin
 if (!isAdmins) throw mess.admin
 let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'
-await rikka.groupParticipantsUpdate(m.chat, [users], 'remove').then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupParticipantsUpdate(m.chat, [users], 'remove').then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 }
 break
 case 'add': {
@@ -374,7 +393,7 @@ if (!m.isGroup) throw mess.group
 if (!isBotAdmins) throw mess.botAdmin
 if (!isAdmins) throw mess.admin
 let users = m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'
-await rikka.groupParticipantsUpdate(m.chat, [users], 'add').then((res) => m.reply(`Usuario adicionado com sucesso`))
+await lofy.groupParticipantsUpdate(m.chat, [users], 'add').then((res) => m.reply(`Usuario adicionado com sucesso`))
 }
 break
 case 'promover': case 'daradm':
@@ -383,7 +402,7 @@ case 'promover': case 'daradm':
  if (!isAdmins) throw mess.admin
  if (m.message.extendedTextMessage === undefined || m.message.extendedTextMessage === null) return m.reply('Marque uma mensagem do alvo!')
 promover = m.message.extendedTextMessage.contextInfo.participant
-const response3 = await rikka.groupParticipantsUpdate(
+const response3 = await lofy.groupParticipantsUpdate(
 from, 
 [promover],
 "promote" 
@@ -397,7 +416,7 @@ case 'demote': case 'rebaixar':
  if (!isAdmins) throw mess.admin
 if (m.message.extendedTextMessage === undefined || m.message.extendedTextMessage === null) return m.reply('Marque uma mensagem do alvo!')
 rebaixar = m.message.extendedTextMessage.contextInfo.participant
-const response4 = await rikka.groupParticipantsUpdate(
+const response4 = await lofy.groupParticipantsUpdate(
 from, 
 [rebaixar],
 "demote" 
@@ -408,13 +427,13 @@ break
 case 'block': case 'bloquear': {
 if (!isCreator) throw mess.owner
 let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'
-await rikka.updateBlockStatus(users, 'block').then((res) => m.reply(`Usuario bloqueado com sucesso`))
+await lofy.updateBlockStatus(users, 'block').then((res) => m.reply(`Usuario bloqueado com sucesso`))
 }
 break
  case 'unblock': case 'desbloquear': {
 if (!isCreator) throw mess.owner
 let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'
-await rikka.updateBlockStatus(users, 'unblock').then((res) => m.reply(`Usuario Desbloqueado com sucesso`))
+await lofy.updateBlockStatus(users, 'unblock').then((res) => m.reply(`Usuario Desbloqueado com sucesso`))
 }
 break
 case 'tagall': {
@@ -427,14 +446,14 @@ let teks = `══✪〘 *👥 MARCAR * 〙✪══
 for (let mem of participants) {
 teks += `⭔ @${mem.id.split('@')[0]}\n`
 }
-rikka.sendMessage(m.chat, { text: teks, mentions: participants.map(a => a.id) }, { quoted: m })
+lofy.sendMessage(m.chat, { text: teks, mentions: participants.map(a => a.id) }, { quoted: m })
 }
 break
 case 'hidetag': {
 if (!m.isGroup) throw mess.group
 if (!isBotAdmins) throw mess.botAdmin
 if (!isAdmins) throw mess.admin
-rikka.sendMessage(m.chat, { text : q ? q : '' , mentions: participants.map(a => a.id)}, { quoted: m })
+lofy.sendMessage(m.chat, { text : q ? q : '' , mentions: participants.map(a => a.id)}, { quoted: m })
 }
 break
 case 'totag': {
@@ -442,7 +461,7 @@ if (!m.isGroup) throw mess.group
 if (!isBotAdmins) throw mess.botAdmin
 if (!isAdmins) throw mess.admin
 if (!m.quoted) throw `Responder mensagem com legenda ${prefix + command}`
-rikka.sendMessage(m.chat, { forward: m.quoted.fakeObj, mentions: participants.map(a => a.id) })
+lofy.sendMessage(m.chat, { forward: m.quoted.fakeObj, mentions: participants.map(a => a.id) })
 }
 break
 case 'style': case 'styletext': {
@@ -493,11 +512,11 @@ let buttonsVote = [
 
 let buttonMessageVote = {
 text: teks_vote,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons: buttonsVote,
 headerType: 1
 }
-rikka.sendMessage(m.chat, buttonMessageVote)
+lofy.sendMessage(m.chat, buttonMessageVote)
 }
 break
 case 'upvote': {
@@ -534,12 +553,12 @@ let buttonsUpvote = [
 
 let buttonMessageUpvote = {
 text: teks_vote,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons: buttonsUpvote,
 headerType: 1,
 mentions: menvote
  }
-rikka.sendMessage(m.chat, buttonMessageUpvote)
+lofy.sendMessage(m.chat, buttonMessageUpvote)
 }
  break
 case 'devote': {
@@ -576,12 +595,12 @@ let buttonsDevote = [
 
 let buttonMessageDevote = {
 text: teks_vote,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons: buttonsDevote,
 headerType: 1,
 mentions: menvote
 }
-rikka.sendMessage(m.chat, buttonMessageDevote)
+lofy.sendMessage(m.chat, buttonMessageDevote)
 }
 break
  
@@ -609,9 +628,9 @@ ${vote[m.chat][2].map((v, i) => `├ ${i + 1}. @${v.split`@`[0]}`).join('\n')}
 *${prefix}hapusvote* - untuk menghapus vote
 
 
-©${rikka.user.id}
+©${lofy.user.id}
 `
-rikka.sendTextWithMentions(m.chat, teks_vote, m)
+lofy.sendTextWithMentions(m.chat, teks_vote, m)
 break
 case 'deletevote': case'delvote': case 'hapusvote': {
 if (!m.isGroup) throw mess.group
@@ -625,15 +644,15 @@ if (!m.isGroup) throw mess.group
 if (!isBotAdmins) throw mess.botAdmin
 if (!isAdmins) throw mess.admin
 if (args[0] === 'close'){
-await rikka.groupSettingUpdate(m.chat, 'announcement').then((res) => m.reply(`Sukses Menutup Group`)).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupSettingUpdate(m.chat, 'announcement').then((res) => m.reply(`Sukses Menutup Group`)).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === 'open'){
-await rikka.groupSettingUpdate(m.chat, 'not_announcement').then((res) => m.reply(`Sukses Membuka Group`)).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupSettingUpdate(m.chat, 'not_announcement').then((res) => m.reply(`Sukses Membuka Group`)).catch((err) => m.reply(jsonformat(err)))
 } else {
 let buttons = [
 { buttonId: 'group open', buttonText: { displayText: 'Open' }, type: 1 },
 { buttonId: 'group close', buttonText: { displayText: 'Close' }, type: 1 }
 ]
-await rikka.sendButtonText(m.chat, buttons, `Mode Group`, rikka.user.name, m)
+await lofy.sendButtonText(m.chat, buttons, `Mode Group`, lofy.user.name, m)
 
  }
 }
@@ -643,15 +662,15 @@ if (!m.isGroup) throw mess.group
 if (!isBotAdmins) throw mess.botAdmin
 if (!isAdmins) throw mess.admin
  if (args[0] === 'open'){
-await rikka.groupSettingUpdate(m.chat, 'unlocked').then((res) => m.reply(`Sukses Membuka Edit Info Group`)).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupSettingUpdate(m.chat, 'unlocked').then((res) => m.reply(`Sukses Membuka Edit Info Group`)).catch((err) => m.reply(jsonformat(err)))
  } else if (args[0] === 'close'){
-await rikka.groupSettingUpdate(m.chat, 'locked').then((res) => m.reply(`Sukses Menutup Edit Info Group`)).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupSettingUpdate(m.chat, 'locked').then((res) => m.reply(`Sukses Menutup Edit Info Group`)).catch((err) => m.reply(jsonformat(err)))
  } else {
  let buttons = [
 { buttonId: 'editinfo open', buttonText: { displayText: 'Open' }, type: 1 },
 { buttonId: 'editinfo close', buttonText: { displayText: 'Close' }, type: 1 }
 ]
-await rikka.sendButtonText(m.chat, buttons, `Mode Edit Info`, rikka.user.name, m)
+await lofy.sendButtonText(m.chat, buttons, `Mode Edit Info`, lofy.user.name, m)
 }
 }
 break
@@ -672,7 +691,7 @@ case 'ip':{
  let buttons = [
 { buttonId: `null`, buttonText: { displayText: 'vlw bot😎🙏' }, type: 1 }
 ]
-await rikka.sendButtonText(m.chat, buttons, taka, sai, m)
+await lofy.sendButtonText(m.chat, buttons, taka, sai, m)
 }
  break
 case 'cep':{
@@ -689,7 +708,7 @@ case 'cep':{
  let buttons = [
 { buttonId: `null`, buttonText: { displayText: 'vlw bot😎🙏' }, type: 1 }
 ]
-await rikka.sendButtonText(m.chat, buttons, tuk, sai, m)
+await lofy.sendButtonText(m.chat, buttons, tuk, sai, m)
 }
  break
 case 'respond': {
@@ -707,7 +726,7 @@ m.reply(`inativo!`)
 { buttonId: '/respond on', buttonText: { displayText: 'On' }, type: 1 },
 { buttonId: '/respond off', buttonText: { displayText: 'Off' }, type: 1 }
 ]
-await rikka.sendButtonText(m.chat, buttons, `Ative Para O Bot Nao Bugar`, rikka.user.name, m)
+await lofy.sendButtonText(m.chat, buttons, `Ative Para O Bot Nao Bugar`, lofy.user.name, m)
 }
  }
  break
@@ -725,10 +744,10 @@ db.data.chats[m.chat].antilink = false
 m.reply(`Antilink inativo!`)
 } else {
  let buttons = [
-{ buttonId: 'antilink on', buttonText: { displayText: 'On' }, type: 1 },
-{ buttonId: 'antilink off', buttonText: { displayText: 'Off' }, type: 1 }
+{ buttonId: '/antilink on', buttonText: { displayText: 'On' }, type: 1 },
+{ buttonId: '/antilink off', buttonText: { displayText: 'Off' }, type: 1 }
 ]
-await rikka.sendButtonText(m.chat, buttons, `Mode Antilink`, rikka.user.name, m)
+await lofy.sendButtonText(m.chat, buttons, `Mode Antilink`, lofy.user.name, m)
 }
  }
  break
@@ -739,25 +758,25 @@ if (!isAdmins) throw mess.admin
 if (args[0] === "on") {
 if (db.data.chats[m.chat].mute) return m.reply(`Sudah Aktif Sebelumnya`)
 db.data.chats[m.chat].mute = true
-m.reply(`${rikka.user.name} telah di mute di group ini !`)
+m.reply(`${lofy.user.name} telah di mute di group ini !`)
 } else if (args[0] === "off") {
 if (!db.data.chats[m.chat].mute) return m.reply(`Sudah Tidak Aktif Sebelumnya`)
 db.data.chats[m.chat].mute = false
-m.reply(`${rikka.user.name} telah di unmute di group ini !`)
+m.reply(`${lofy.user.name} telah di unmute di group ini !`)
 } else {
  let buttons = [
 { buttonId: '/mute on', buttonText: { displayText: 'On' }, type: 1 },
 { buttonId: '/mute off', buttonText: { displayText: 'Off' }, type: 1 }
 ]
-await rikka.sendButtonText(m.chat, buttons, `Mute Bot`, rikka.user.name, m)
+await lofy.sendButtonText(m.chat, buttons, `Mute Bot`, lofy.user.name, m)
 }
  }
  break
 case 'linkgroup': case 'linkgc': {
 if (!m.isGroup) throw mess.group
 if (!isBotAdmins) throw mess.botAdmin
-let response = await rikka.groupInviteCode(m.chat)
-rikka.sendText(m.chat, `https://chat.whatsapp.com/${response}\n\nLink Group : ${groupMetadata.subject}`, m, { detectLink: true })
+let response = await lofy.groupInviteCode(m.chat)
+lofy.sendText(m.chat, `https://chat.whatsapp.com/${response}\n\nLink Group : ${groupMetadata.subject}`, m, { detectLink: true })
 }
 break
 case 'ephemeral': {
@@ -765,13 +784,13 @@ if (!m.isGroup) throw mess.group
 if (!isBotAdmins) throw mess.botAdmin
 if (!isAdmins) throw mess.admin
 if (args[0] === '1') {
-await rikka.groupToggleEphemeral(m.chat, 1*24*3600).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupToggleEphemeral(m.chat, 1*24*3600).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === '7') {
-await rikka.groupToggleEphemeral(m.chat, 7*24*3600).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupToggleEphemeral(m.chat, 7*24*3600).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === '90') {
-await rikka.groupToggleEphemeral(m.chat, 90*24*3600).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupToggleEphemeral(m.chat, 90*24*3600).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else if (args[0] === 'off') {
-await rikka.groupToggleEphemeral(m.chat, 0).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
+await lofy.groupToggleEphemeral(m.chat, 0).then((res) => m.reply(jsonformat(res))).catch((err) => m.reply(jsonformat(err)))
 } else {
 let sections = [
 {
@@ -784,7 +803,7 @@ rows: [
 ]
 },
 ]
-rikka.sendListMsg(m.chat, `Please select the following Ephemeral Options List !`, rikka.user.name, `Hello Admin ${groupMetadata.subject}`, `Click Here`, sections, m)
+lofy.sendListMsg(m.chat, `Please select the following Ephemeral Options List !`, lofy.user.name, `Hello Admin ${groupMetadata.subject}`, `Click Here`, sections, m)
 }
 }
 break
@@ -792,13 +811,13 @@ case 'delete': case 'del': {
 if (!m.quoted) throw false
 let { chat, fromMe, id, isBaileys } = m.quoted
 if (!isBaileys) throw 'A mensagem não foi enviada por um bot!'
-rikka.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: true, id: m.quoted.id, participant: m.quoted.sender } })
+lofy.sendMessage(m.chat, { delete: { remoteJid: m.chat, fromMe: true, id: m.quoted.id, participant: m.quoted.sender } })
 }
 break
 case 'bcgc': case 'bcgroup': {
 if (!isCreator) throw mess.owner
 if (!text) throw `Text mana?\n\nExample : ${prefix + command} fatih-san`
-let getGroups = await rikka.groupFetchAllParticipating()
+let getGroups = await lofy.groupFetchAllParticipating()
 let groups = Object.entries(getGroups).slice(0).map(entry => entry[1])
 let anu = groups.map(v => v.id)
 m.reply(`Mengirim Broadcast Ke ${anu.length} Group Chat, Waktu Selesai ${anu.length * 1.5} detik`)
@@ -807,7 +826,7 @@ await sleep(1500)
 let btn = [{
 urlButton: {
 displayText: 'Source Code',
-url: 'https://github.com/DikaArdnt/rikka-Morou'
+url: 'https://github.com/DikaArdnt/lofy-Morou'
 }
 }, {
 callButton: {
@@ -831,7 +850,7 @@ id: 'sc'
 }
 }]
   let txt = `「 Broadcast Bot 」\n\n${text}`
-  rikka.send5ButImg(i, txt, rikka.user.name, global.thumb, btn)
+  lofy.send5ButImg(i, txt, lofy.user.name, global.thumb, btn)
 }
 m.reply(`Sukses Mengirim Broadcast Ke ${anu.length} Group`)
 }
@@ -846,7 +865,7 @@ await sleep(1500)
 let btn = [{
 urlButton: {
 displayText: 'Source Code',
-url: 'https://github.com/DikaArdnt/rikka-Morou'
+url: 'https://github.com/DikaArdnt/lofy-Morou'
 }
 }, {
 callButton: {
@@ -870,7 +889,7 @@ id: 'sc'
 }
 }]
   let txt = `「 Broadcast Bot 」\n\n${text}`
-  rikka.send5ButImg(yoi, txt, rikka.user.name, global.thumb, btn)
+  lofy.send5ButImg(yoi, txt, lofy.user.name, global.thumb, btn)
 }
 m.reply('Sukses Broadcast')
 }
@@ -887,12 +906,12 @@ let waktu = read ? read : unread
 teks += `⭔ @${i.userJid.split('@')[0]}\n`
 teks += ` ┗━⭔ *Waktu :* ${moment(waktu * 1000).format('DD/MM/YY HH:mm:ss')} ⭔ *Status :* ${read ? 'Dibaca' : 'Terkirim'}\n\n`
 }
-rikka.sendTextWithMentions(m.chat, teks, m)
+lofy.sendTextWithMentions(m.chat, teks, m)
 }
 break
 case 'q': case 'quoted': {
 if (!m.quoted) return m.reply('Marque!!')
-let wokwol = await rikka.serializeM(await m.getQuotedObj())
+let wokwol = await lofy.serializeM(await m.getQuotedObj())
 if (!wokwol.quoted) return m.reply('A mensagem que você respondeu não contém uma resposta')
 await wokwol.quoted.copyNForward(m.chat, true)
 }
@@ -904,23 +923,23 @@ case 'listpc': {
  let nama = store.messages[i].array[0].pushName
  teks += `⬡ *Nama :* ${nama}\n⬡ *User :* @${i.split('@')[0]}\n⬡ *Chat :* https://wa.me/${i.split('@')[0]}\n\n────────────────────────\n\n`
  }
- rikka.sendTextWithMentions(m.chat, teks, m)
+ lofy.sendTextWithMentions(m.chat, teks, m)
  }
  break
 case 'listgc': {
  let anu = await store.chats.all().filter(v => v.id.endsWith('@g.us')).map(v => v.id)
  let teks = `⬣ *LIST GROUP CHAT*\n\nTotal Group : ${anu.length} Group\n\n`
  for (let i of anu) {
- let metadata = await rikka.groupMetadata(i)
+ let metadata = await lofy.groupMetadata(i)
  teks += `⬡ *Nama :* ${metadata.subject}\n⬡ *Owner :* ${metadata.owner !== undefined ? '@' + metadata.owner.split`@`[0] : 'Tidak diketahui'}\n⬡ *ID :* ${metadata.id}\n⬡ *Dibuat :* ${moment(metadata.creation * 1000).tz('Asia/Jakarta').format('DD/MM/YYYY HH:mm:ss')}\n⬡ *Member :* ${metadata.participants.length}\n\n────────────────────────\n\n`
  }
- rikka.sendTextWithMentions(m.chat, teks, m)
+ lofy.sendTextWithMentions(m.chat, teks, m)
  }
  break
  case 'listonline': case 'liston': {
 let id = args && /\d+\-\d+@g.us/.test(args[0]) ? args[0] : m.chat
 let online = [...Object.keys(store.presences[id]), botNumber]
-rikka.sendText(m.chat, 'List Online:\n\n' + online.map(v => '⭔ @' + v.replace(/@.+/, '')).join`\n`, m, { mentions: online })
+lofy.sendText(m.chat, 'List Online:\n\n' + online.map(v => '⭔ @' + v.replace(/@.+/, '')).join`\n`, m, { mentions: online })
  }
  break
 case 'figu': case 'f': case 'figurinha': case 'fi': {
@@ -928,12 +947,12 @@ if (!quoted) throw `Responda Video/Image Com legenda ${prefix + command}`
 m.reply(mess.wait)
 if (/image/.test(mime)) {
 let media = await quoted.download()
-let encmedia = await rikka.sendImageAsSticker(m.chat, media, m, { packname: global.packname, author: `by: ${pushname}` })
+let encmedia = await lofy.sendImageAsSticker(m.chat, media, m, { packname: global.packname, author: `by: ${pushname}` })
 await fs.unlinkSync(encmedia)
 } else if (/video/.test(mime)) {
 if ((quoted.msg || quoted).seconds > 11) return m.reply('Máximo de 10 segundos!')
 let media = await quoted.download()
-let encmedia = await rikka.sendVideoAsSticker(m.chat, media, m, { packname: global.packname, author: `by: ${pushname}` })
+let encmedia = await lofy.sendVideoAsSticker(m.chat, media, m, { packname: global.packname, author: `by: ${pushname}` })
 await fs.unlinkSync(encmedia)
 } else {
 throw `Enviar imagem/vídeo com legenda ${prefix + command}\nDuração do vídeo 1-9 segundos`
@@ -948,12 +967,12 @@ if (!teks2) throw `Enviar/responder imagem/vídeo com legenda ${prefix + command
 m.reply(mess.wait)
 if (/image/.test(mime)) {
 let media = await quoted.download()
-let encmedia = await rikka.sendImageAsSticker(m.chat, media, m, { packname: teks1, author: teks2 })
+let encmedia = await lofy.sendImageAsSticker(m.chat, media, m, { packname: teks1, author: teks2 })
 await fs.unlinkSync(encmedia)
 } else if (/video/.test(mime)) {
 if ((quoted.msg || quoted).seconds > 11) return m.reply('Máximo de 10 segundos!')
 let media = await quoted.download()
-let encmedia = await rikka.sendVideoAsSticker(m.chat, media, m, { packname: teks1, author: teks2 })
+let encmedia = await lofy.sendVideoAsSticker(m.chat, media, m, { packname: teks1, author: teks2 })
 await fs.unlinkSync(encmedia)
 } else {
 throw `Enviar imagem/vídeo com legenda ${prefix + command}\nDuração do vídeo 1-9 segundos`
@@ -980,7 +999,7 @@ if (!emoji1) throw `Exemplo : ${prefix + command} 😅+🤔`
 if (!emoji2) throw `Exemplo : ${prefix + command} 😅+🤔`
 let anu = await fetchJson(`https://tenor.googleapis.com/v2/featured?key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&contentfilter=high&media_filter=png_transparent&component=proactive&collection=emoji_kitchen_v5&q=${encodeURIComponent(emoji1)}_${encodeURIComponent(emoji2)}`)
 for (let res of anu.results) {
-let encmedia = await rikka.sendImageAsSticker(m.chat, res.url, m, { packname: global.packname, author: global.author, categories: res.tags })
+let encmedia = await lofy.sendImageAsSticker(m.chat, res.url, m, { packname: global.packname, author: global.author, categories: res.tags })
 await fs.unlinkSync(encmedia)
 }
 }
@@ -989,14 +1008,14 @@ case 'emojimix2': {
 if (!text) throw `Exemplo : ${prefix + command} 😅`
 let anu = await fetchJson(`https://tenor.googleapis.com/v2/featured?key=AIzaSyAyimkuYQYF_FXVALexPuGQctUWRURdCYQ&contentfilter=high&media_filter=png_transparent&component=proactive&collection=emoji_kitchen_v5&q=${encodeURIComponent(text)}`)
 for (let res of anu.results) {
-let encmedia = await rikka.sendImageAsSticker(m.chat, res.url, m, { packname: global.packname, author: global.author, categories: res.tags })
+let encmedia = await lofy.sendImageAsSticker(m.chat, res.url, m, { packname: global.packname, author: global.author, categories: res.tags })
 await fs.unlinkSync(encmedia)
 }
 }
 break
    case 'attp': case 'ttp': {
    if (!text) throw `Exemplo : ${prefix + command} Texto`
-   await rikka.sendMedia(m.chat, `https://xteam.xyz/${command}?file&text=${text}`, 'rikka', 'takanashi', m, {asSticker: true})
+   await lofy.sendMedia(m.chat, `https://xteam.xyz/${command}?file&text=${text}`, 'lofy', 'takanashi', m, {asSticker: true})
 
  }
  break
@@ -1011,7 +1030,7 @@ let dwnld = await quoted.download()
 let { floNime } = require('./lib/uploader')
 let fatGans = await floNime(dwnld)
 let smeme = `https://api.memegen.link/images/custom/${encodeURIComponent(atas)}/${encodeURIComponent(bawah)}.png?background=${fatGans.result.url}`
-let FaTiH = await rikka.sendImageAsSticker(m.chat, smeme, m, { packname: global.packname, author: global.auhor })
+let FaTiH = await lofy.sendImageAsSticker(m.chat, smeme, m, { packname: global.packname, author: global.auhor })
 await fs.unlinkSync(FaTiH)
 }
 break 
@@ -1019,13 +1038,13 @@ case 'toimage': case 'toimg': {
 if (!quoted) throw 'Reply Image'
 if (!/webp/.test(mime)) throw `Balas sticker dengan caption *${prefix + command}*`
 m.reply(mess.wait)
-let media = await rikka.downloadAndSaveMediaMessage(quoted)
+let media = await lofy.downloadAndSaveMediaMessage(quoted)
 let ran = await getRandom('.png')
 exec(`ffmpeg -i ${media} ${ran}`, (err) => {
 fs.unlinkSync(media)
 if (err) throw err
 let buffer = fs.readFileSync(ran)
-rikka.sendMessage(m.chat, { image: buffer }, { quoted: m })
+lofy.sendMessage(m.chat, { image: buffer }, { quoted: m })
 fs.unlinkSync(ran)
 })
 }
@@ -1035,9 +1054,9 @@ if (!quoted) throw 'Reply Image'
 if (!/webp/.test(mime)) throw `balas stiker dengan caption *${prefix + command}*`
 m.reply(mess.wait)
 let { webp2mp4File } = require('./lib/uploader')
-let media = await rikka.downloadAndSaveMediaMessage(quoted)
+let media = await lofy.downloadAndSaveMediaMessage(quoted)
 let webpToMp4 = await webp2mp4File(media)
-await rikka.sendMessage(m.chat, { video: { url: webpToMp4.result, caption: 'Convert Webp To Video' } }, { quoted: m })
+await lofy.sendMessage(m.chat, { video: { url: webpToMp4.result, caption: 'Convert Webp To Video' } }, { quoted: m })
 await fs.unlinkSync(media)
 }
 break
@@ -1048,7 +1067,7 @@ m.reply(mess.wait)
 let media = await quoted.download()
 let { toAudio } = require('./lib/converter')
 let audio = await toAudio(media, 'mp4')
-rikka.sendMessage(m.chat, {audio: audio, mimetype: 'audio/mpeg'}, { quoted : m })
+lofy.sendMessage(m.chat, {audio: audio, mimetype: 'audio/mpeg'}, { quoted : m })
 }
 break
 case 'tomp3': {
@@ -1059,7 +1078,7 @@ m.reply(mess.wait)
 let media = await quoted.download()
 let { toAudio } = require('./lib/converter')
 let audio = await toAudio(media, 'mp4')
-rikka.sendMessage(m.chat, {document: audio, mimetype: 'audio/mpeg', fileName: `Convert By ${rikka.user.name}.mp3`}, { quoted : m })
+lofy.sendMessage(m.chat, {document: audio, mimetype: 'audio/mpeg', fileName: `Convert By ${lofy.user.name}.mp3`}, { quoted : m })
 }
 break
 case 'tovn': case 'toptt': {
@@ -1069,7 +1088,7 @@ m.reply(mess.wait)
 let media = await quoted.download()
 let { toPTT } = require('./lib/converter')
 let audio = await toPTT(media, 'mp4')
-rikka.sendMessage(m.chat, {audio: audio, mimetype:'audio/mpeg', ptt:true }, {quoted:m})
+lofy.sendMessage(m.chat, {audio: audio, mimetype:'audio/mpeg', ptt:true }, {quoted:m})
 }
 break
 case 'togif': {
@@ -1077,16 +1096,16 @@ if (!quoted) throw 'Reply Image'
 if (!/webp/.test(mime)) throw `balas stiker dengan caption *${prefix + command}*`
 m.reply(mess.wait)
 let { webp2mp4File } = require('./lib/uploader')
-let media = await rikka.downloadAndSaveMediaMessage(quoted)
+let media = await lofy.downloadAndSaveMediaMessage(quoted)
 let webpToMp4 = await webp2mp4File(media)
-await rikka.sendMessage(m.chat, { video: { url: webpToMp4.result, caption: 'Convert Webp To Video' }, gifPlayback: true }, { quoted: m })
+await lofy.sendMessage(m.chat, { video: { url: webpToMp4.result, caption: 'Convert Webp To Video' }, gifPlayback: true }, { quoted: m })
 await fs.unlinkSync(media)
 }
 break
 case 'tourl': {
 m.reply(mess.wait)
 let { UploadFileUgu, webp2mp4File, TelegraPh } = require('./lib/uploader')
-let media = await rikka.downloadAndSaveMediaMessage(quoted)
+let media = await lofy.downloadAndSaveMediaMessage(quoted)
 if (/image/.test(mime)) {
 let anu = await TelegraPh(media)
 m.reply(util.format(anu))
@@ -1105,7 +1124,7 @@ let remobg = require('remove.bg')
 let apirnobg = ['q61faXzzR5zNU6cvcrwtUkRU','S258diZhcuFJooAtHTaPEn4T','5LjfCVAp4vVNYiTjq9mXJWHF','aT7ibfUsGSwFyjaPZ9eoJc61','BY63t7Vx2tS68YZFY6AJ4HHF','5Gdq1sSWSeyZzPMHqz7ENfi8','86h6d6u4AXrst4BVMD9dzdGZ','xp8pSDavAgfE5XScqXo9UKHF','dWbCoCb3TacCP93imNEcPxcL']
 let apinobg = apirnobg[Math.floor(Math.random() * apirnobg.length)]
 hmm = await './src/remobg-'+getRandom('')
-localFile = await rikka.downloadAndSaveMediaMessage(quoted, hmm)
+localFile = await lofy.downloadAndSaveMediaMessage(quoted, hmm)
 outputFile = await './src/hremo-'+getRandom('.png')
 m.reply(mess.wait)
 remobg.removeBackgroundFromImageFile({
@@ -1116,7 +1135,7 @@ remobg.removeBackgroundFromImageFile({
   scale: "100%",
   outputFile 
 }).then(async result => {
-rikka.sendMessage(m.chat, {image: fs.readFileSync(outputFile), caption: mess.success}, { quoted : m })
+lofy.sendMessage(m.chat, {image: fs.readFileSync(outputFile), caption: mess.success}, { quoted : m })
 await fs.unlinkSync(localFile)
 await fs.unlinkSync(outputFile)
 })
@@ -1131,7 +1150,7 @@ let no = 1
 for (let i of search.all) {
 teks += `⭔ Numero : ${no++}\n⭔ Tipo : ${i.type}\n⭔ Video ID : ${i.videoId}\n⭔ Titulo : ${i.title}\n⭔ Views : ${i.views}\n⭔ Duração : ${i.timestamp}\n⭔ Upload At : ${i.ago}\n⭔ Autor : ${i.author.name}\n⭔ Url : ${i.url}\n\n─────────────────\n\n`
 }
-rikka.sendMessage(m.chat, { image: { url: search.all[0].thumbnail },  caption: teks }, { quoted: m })
+lofy.sendMessage(m.chat, { image: { url: search.all[0].thumbnail },  caption: teks }, { quoted: m })
 }
 break
 case 'google': {
@@ -1162,11 +1181,11 @@ image: { url: images },
 caption: `*-------「 GIMAGE SEARCH 」-------*
 🤠 *Query* : ${text}
 🔗 *Media Url* : ${images}`,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons: buttons,
 headerType: 4
 }
-rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
 })
 }
 break
@@ -1192,11 +1211,11 @@ caption: `
 ⭔ Channel : ${anu.author.url}
 ⭔ Description : ${anu.description}
 ⭔ Url : ${anu.url}`,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons: buttons,
 headerType: 4
 }
-rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
 }
 break
 case 'ytmp3': case 'ytaudio': {
@@ -1205,8 +1224,8 @@ if (!text) throw `Example : ${prefix + command} https://youtube.com/watch?v=PtFM
 let quality = args[1] ? args[1] : '128kbps'
 let media = await yta(text, quality)
 if (media.filesize >= 100000) return m.reply('File Melebihi Batas '+util.format(media))
-rikka.sendImage(m.chat, media.thumb, `⭔ Title : ${media.title}\n⭔ File Size : ${media.filesizeF}\n⭔ Url : ${isUrl(text)}\n⭔ Ext : MP3\n⭔ Resolusi : ${args[1] || '128kbps'}`, m)
-rikka.sendMessage(m.chat, { audio: { url: media.dl_link }, mimetype: 'audio/mpeg', fileName: `${media.title}.mp3` }, { quoted: m })
+lofy.sendImage(m.chat, media.thumb, `⭔ Title : ${media.title}\n⭔ File Size : ${media.filesizeF}\n⭔ Url : ${isUrl(text)}\n⭔ Ext : MP3\n⭔ Resolusi : ${args[1] || '128kbps'}`, m)
+lofy.sendMessage(m.chat, { audio: { url: media.dl_link }, mimetype: 'audio/mpeg', fileName: `${media.title}.mp3` }, { quoted: m })
 }
 break
 case 'ytmp4': case 'ytvideo': {
@@ -1215,7 +1234,7 @@ if (!text) throw `Example : ${prefix + command} https://youtube.com/watch?v=PtFM
 let quality = args[1] ? args[1] : '360p'
 let media = await ytv(text, quality)
 if (media.filesize >= 100000) return m.reply('File Melebihi Batas '+util.format(media))
-rikka.sendMessage(m.chat, { video: { url: media.dl_link }, mimetype: 'video/mp4', fileName: `${media.title}.mp4`, caption: `⭔ Title : ${media.title}\n⭔ File Size : ${media.filesizeF}\n⭔ Url : ${isUrl(text)}\n⭔ Ext : MP3\n⭔ Resolusi : ${args[1] || '360p'}` }, { quoted: m })
+lofy.sendMessage(m.chat, { video: { url: media.dl_link }, mimetype: 'video/mp4', fileName: `${media.title}.mp4`, caption: `⭔ Title : ${media.title}\n⭔ File Size : ${media.filesizeF}\n⭔ Url : ${isUrl(text)}\n⭔ Ext : MP3\n⭔ Resolusi : ${args[1] || '360p'}` }, { quoted: m })
 }
 break
 case 'getmusic': {
@@ -1228,8 +1247,8 @@ if (!urls) throw `Mungkin pesan yang anda reply tidak mengandung result ytsearch
 let quality = args[1] ? args[1] : '128kbps'
 let media = await yta(urls[text - 1], quality)
 if (media.filesize >= 100000) return m.reply('File Melebihi Batas '+util.format(media))
-rikka.sendImage(m.chat, media.thumb, `⭔ Title : ${media.title}\n⭔ File Size : ${media.filesizeF}\n⭔ Url : ${urls[text - 1]}\n⭔ Ext : MP3\n⭔ Resolusi : ${args[1] || '128kbps'}`, m)
-rikka.sendMessage(m.chat, { audio: { url: media.dl_link }, mimetype: 'audio/mpeg', fileName: `${media.title}.mp3` }, { quoted: m })
+lofy.sendImage(m.chat, media.thumb, `⭔ Title : ${media.title}\n⭔ File Size : ${media.filesizeF}\n⭔ Url : ${urls[text - 1]}\n⭔ Ext : MP3\n⭔ Resolusi : ${args[1] || '128kbps'}`, m)
+lofy.sendMessage(m.chat, { audio: { url: media.dl_link }, mimetype: 'audio/mpeg', fileName: `${media.title}.mp3` }, { quoted: m })
 }
 break
 case 'getvideo': {
@@ -1242,7 +1261,7 @@ if (!urls) throw `Mungkin pesan yang anda reply tidak mengandung result ytsearch
 let quality = args[1] ? args[1] : '360p'
 let media = await ytv(urls[text - 1], quality)
 if (media.filesize >= 100000) return m.reply('File Melebihi Batas '+util.format(media))
-rikka.sendMessage(m.chat, { video: { url: media.dl_link }, mimetype: 'video/mp4', fileName: `${media.title}.mp4`, caption: `⭔ Title : ${media.title}\n⭔ File Size : ${media.filesizeF}\n⭔ Url : ${urls[text - 1]}\n⭔ Ext : MP3\n⭔ Resolusi : ${args[1] || '360p'}` }, { quoted: m })
+lofy.sendMessage(m.chat, { video: { url: media.dl_link }, mimetype: 'video/mp4', fileName: `${media.title}.mp4`, caption: `⭔ Title : ${media.title}\n⭔ File Size : ${media.filesizeF}\n⭔ Url : ${urls[text - 1]}\n⭔ Ext : MP3\n⭔ Resolusi : ${args[1] || '360p'}` }, { quoted: m })
 }
 break
 case 'pinterest': {
@@ -1250,15 +1269,15 @@ m.reply(mess.wait)
 let { pinterest } = require('./lib/scraper')
 anu = await pinterest(text)
 result = anu[Math.floor(Math.random() * anu.length)]
-rikka.sendMessage(m.chat, { image: { url: result }, caption: '⭔ Media Url : '+result }, { quoted: m })
+lofy.sendMessage(m.chat, { image: { url: result }, caption: '⭔ Media Url : '+result }, { quoted: m })
 }
 break
 case 'couple': {
 m.reply(mess.wait)
 let anu = await fetchJson('https://raw.githubusercontent.com/iamriz7/kopel_/main/kopel.json')
 let random = anu[Math.floor(Math.random() * anu.length)]
-rikka.sendMessage(m.chat, { image: { url: random.male }, caption: `Couple Male` }, { quoted: m })
-rikka.sendMessage(m.chat, { image: { url: random.female }, caption: `Couple Female` }, { quoted: m })
+lofy.sendMessage(m.chat, { image: { url: random.male }, caption: `Couple Male` }, { quoted: m })
+lofy.sendMessage(m.chat, { image: { url: random.female }, caption: `Couple Female` }, { quoted: m })
 }
 break
 case 'coffe': case 'kopi': {
@@ -1268,11 +1287,11 @@ let buttons = [
 let buttonMessage = {
 image: { url: 'https://coffee.alexflipnote.dev/random' },
 caption: `☕ Random Coffe`,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons: buttons,
 headerType: 4
 }
-rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
 }
 break
 case 'wallpaper': {
@@ -1286,11 +1305,11 @@ let buttons = [
 let buttonMessage = {
 image: { url: result.image[0] },
 caption: `⭔ Title : ${result.title}\n⭔ Category : ${result.type}\n⭔ Detail : ${result.source}\n⭔ Media Url : ${result.image[2] || result.image[1] || result.image[0]}`,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons: buttons,
 headerType: 4
 }
-rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
 }
 break
 case 'wikimedia': {
@@ -1304,11 +1323,11 @@ let buttons = [
 let buttonMessage = {
 image: { url: result.image },
 caption: `⭔ Title : ${result.title}\n⭔ Source : ${result.source}\n⭔ Media Url : ${result.image}`,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons: buttons,
 headerType: 4
 }
-rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
 }
 break
 case 'quotesanime': case 'quoteanime': {
@@ -1324,19 +1343,19 @@ footer: 'Press The Button Below',
 buttons: buttons,
 headerType: 2
 }
-rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
 }
 break
 case '3dchristmas': case '3ddeepsea': case 'americanflag': case '3dscifi': case '3drainbow': case '3dwaterpipe': case 'halloweenskeleton': case 'sketch': case 'bluecircuit': case 'space': case 'metallic': case 'fiction': case 'greenhorror': case 'transformer': case 'berry': case 'thunder': case 'magma': case '3dcrackedstone': case '3dneonlight': case 'impressiveglitch': case 'naturalleaves': case 'fireworksparkle': case 'matrix': case 'dropwater':  case 'harrypotter': case 'foggywindow': case 'neondevils': case 'christmasholiday': case '3dgradient': case 'blackpink': case 'gluetext': {
 if (!text) throw `Example : ${prefix + command} text`
 m.reply(mess.wait)
-rikka.sendMessage(m.chat, { image: { url: api('zenz', '/textpro/' + command, { text: text }, 'apikey') }, caption: `Text Pro ${command}` }, { quoted: m})
+lofy.sendMessage(m.chat, { image: { url: api('zenz', '/textpro/' + command, { text: text }, 'apikey') }, caption: `Text Pro ${command}` }, { quoted: m})
 }
 break
 case 'shadow': case 'romantic': case 'smoke': case 'burnpapper': case 'naruto': case 'lovemsg': case 'grassmsg': case 'lovetext': case 'coffecup': case 'butterfly': case 'harrypotter': case 'retrolol': {
 if (!text) throw 'falta o texto'
 m.reply(mess.wait)
-rikka.sendMessage(m.chat, { image: { url: api('zenz', '/photooxy/' + command, { text: text }, 'apikey') }, caption: `Photo Oxy ${command}` }, { quoted: m })
+lofy.sendMessage(m.chat, { image: { url: api('zenz', '/photooxy/' + command, { text: text }, 'apikey') }, caption: `Photo Oxy ${command}` }, { quoted: m })
 }
 break
 case 'stalker': case 'stalk': {
@@ -1378,7 +1397,7 @@ db.data.users[m.sender].limit -= 1
 if (!id) throw `No Query username, Example : ${prefix + command} ig cak_haho`
 let { result: anu } = await fetchJson(api('zenz', '/api/stalker/ig', { username: id }, 'apikey'))
 if (anu.status == false) return m.reply(anu.result.message)
-rikka.sendMedia(m.chat, anu.caption.profile_hd, '', `⭔ Full Name : ${anu.caption.full_name}\n⭔ User Name : ${anu.caption.user_name}\n⭔ ID ${anu.caption.user_id}\n⭔ Followers : ${anu.caption.followers}\n⭔ Following : ${anu.caption.following}\n⭔ Bussines : ${anu.caption.bussines}\n⭔ Profesional : ${anu.caption.profesional}\n⭔ Verified : ${anu.caption.verified}\n⭔ Private : ${anu.caption.private}\n⭔ Bio : ${anu.caption.biography}\n⭔ Bio Url : ${anu.caption.bio_url}`, m)
+lofy.sendMedia(m.chat, anu.caption.profile_hd, '', `⭔ Full Name : ${anu.caption.full_name}\n⭔ User Name : ${anu.caption.user_name}\n⭔ ID ${anu.caption.user_id}\n⭔ Followers : ${anu.caption.followers}\n⭔ Following : ${anu.caption.following}\n⭔ Bussines : ${anu.caption.bussines}\n⭔ Profesional : ${anu.caption.profesional}\n⭔ Verified : ${anu.caption.verified}\n⭔ Private : ${anu.caption.private}\n⭔ Bio : ${anu.caption.biography}\n⭔ Bio Url : ${anu.caption.bio_url}`, m)
 db.data.users[m.sender].limit -= 1
 } else if (type.toLowerCase() == 'npm') {
 if (!id) throw `No Query username, Example : ${prefix + command} npm scrape-primbon`
@@ -1396,10 +1415,10 @@ if (!text) throw 'No Query Url!'
 m.reply(mess.wait)
 if (/(?:\/p\/|\/reel\/|\/tv\/)([^\s&]+)/.test(isUrl(text)[0])) {
 let anu = await fetchJson(api('zenz', '/downloader/instagram2', { url: isUrl(text)[0] }, 'apikey'))
-for (let media of anu.data) rikka.sendFileUrl(m.chat, media, `Download Url Instagram From ${isUrl(text)[0]}`, m)
+for (let media of anu.data) lofy.sendFileUrl(m.chat, media, `Download Url Instagram From ${isUrl(text)[0]}`, m)
 } else if (/\/stories\/([^\s&]+)/.test(isUrl(text)[0])) {
 let anu = await fetchJson(api('zenz', '/downloader/instastory', { url: isUrl(text)[0] }, 'apikey'))
-rikka.sendFileUrl(m.chat, anu.media[0].url, `Download Url Instagram From ${isUrl(text)[0]}`, m)
+lofy.sendFileUrl(m.chat, anu.media[0].url, `Download Url Instagram From ${isUrl(text)[0]}`, m)
 }
 }
 break
@@ -1407,16 +1426,16 @@ case 'joox': case 'jooxdl': {
 if (!text) throw 'No Query Title'
 m.reply(mess.wait)
 let anu = await fetchJson(api('zenz', '/downloader/joox', { query: text }, 'apikey'))
-let msg = await rikka.sendImage(m.chat, anu.result.img, `⭔ Title : ${anu.result.lagu}\n⭔ Album : ${anu.result.album}\n⭔ Singer : ${anu.result.penyanyi}\n⭔ Publish : ${anu.result.publish}\n⭔ Lirik :\n${anu.result.lirik.result}`, m)
-rikka.sendMessage(m.chat, { audio: { url: anu.result.mp4aLink }, mimetype: 'audio/mpeg', fileName: anu.result.lagu+'.m4a' }, { quoted: msg })
+let msg = await lofy.sendImage(m.chat, anu.result.img, `⭔ Title : ${anu.result.lagu}\n⭔ Album : ${anu.result.album}\n⭔ Singer : ${anu.result.penyanyi}\n⭔ Publish : ${anu.result.publish}\n⭔ Lirik :\n${anu.result.lirik.result}`, m)
+lofy.sendMessage(m.chat, { audio: { url: anu.result.mp4aLink }, mimetype: 'audio/mpeg', fileName: anu.result.lagu+'.m4a' }, { quoted: msg })
 }
 break
 case 'soundcloud': case 'scdl': {
 if (!text) throw 'No Query Title'
 m.reply(mess.wait)
 let anu = await fetchJson(api('zenz', '/downloader/soundcloud', { url: isUrl(text)[0] }, 'apikey'))
-let msg = await rikka.sendImage(m.chat, anu.result.thumb, `⭔ Title : ${anu.result.title}\n⭔ Url : ${isUrl(text)[0]}`)
-rikka.sendMessage(m.chat, { audio: { url: anu.result.url }, mimetype: 'audio/mpeg', fileName: anu.result.title+'.m4a' }, { quoted: msg })
+let msg = await lofy.sendImage(m.chat, anu.result.thumb, `⭔ Title : ${anu.result.title}\n⭔ Url : ${isUrl(text)[0]}`)
+lofy.sendMessage(m.chat, { audio: { url: anu.result.url }, mimetype: 'audio/mpeg', fileName: anu.result.title+'.m4a' }, { quoted: msg })
 }
 break
 case 'twitdl': case 'twitter': {
@@ -1433,7 +1452,7 @@ footer: 'Press The Button Below',
 buttons: buttons,
 headerType: 5
 }
-rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
 }
 break
 case 'twittermp3': case 'twitteraudio': {
@@ -1450,22 +1469,22 @@ footer: 'Press The Button Below',
 buttons: buttons,
 headerType: 4
 }
-let msg = await rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
-rikka.sendMessage(m.chat, { audio: { url: anu.result.audio } }, { quoted: msg })
+let msg = await lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, { audio: { url: anu.result.audio } }, { quoted: msg })
 }
 break
 case 'fbdl': case 'fb': case 'facebook': {
 if (!text) throw 'cade o link!'
 m.reply(mess.wait)
 let anu = await fetchJson(api('zenz', '/api/downloader/facebook', { url: text }, 'apikey'))
-rikka.sendMessage(m.chat, { video: { url: anu.result.url }, caption: `⭔ Title : ${anu.result.title}`}, { quoted: m })
+lofy.sendMessage(m.chat, { video: { url: anu.result.url }, caption: `⭔ Title : ${anu.result.title}`}, { quoted: m })
 }
 break
 case 'pindl': case 'pinterestdl': {
 if (!text) throw 'cade o link!'
 m.reply(mess.wait)
 let anu = await fetchJson(api('zenz', '/api/downloader/pinterestdl', { url: text }, 'apikey'))
-rikka.sendMessage(m.chat, { video: { url: anu.result }, caption: `Download From ${text}` }, { quoted: m })
+lofy.sendMessage(m.chat, { video: { url: anu.result }, caption: `Download From ${text}` }, { quoted: m })
 }
 break
 case 'yplay': case 'ytplay': {
@@ -1487,14 +1506,14 @@ caption: `
 ⭔ Url : ${anu.media[0]}
 Untuk Download Media Silahkan Klik salah satu Button dibawah ini atau masukkan command ytmp3/ytmp4 dengan url diatas
 `,
-footer: rikka.user.name,
+footer: lofy.user.name,
 buttons,
 headerType: 4
 }
-rikka.sendMessage(m.chat, buttonMessage, { quoted: m })
+lofy.sendMessage(m.chat, buttonMessage, { quoted: m })
 } else if (anu.type == 'image') {
 anu.media.map(async (url) => {
-rikka.sendMessage(m.chat, { image: { url }, caption: `⭔ Title : ${anu.title}\n⭔ Author : ${anu.author.name}\n⭔ Like : ${anu.like}\n⭔ Caption : ${anu.caption}` }, { quoted: m })
+lofy.sendMessage(m.chat, { image: { url }, caption: `⭔ Title : ${anu.title}\n⭔ Author : ${anu.author.name}\n⭔ Like : ${anu.like}\n⭔ Caption : ${anu.caption}` }, { quoted: m })
 })
 }
 }
@@ -1516,13 +1535,13 @@ if (/smooth/.test(command)) set = '-filter:v "minterpolate=\'mi_mode=mci:mc_mode
 if (/tupai/.test(command)) set = '-filter:a "atempo=0.5,asetrate=65100"'
 if (/audio/.test(mime)) {
 m.reply(mess.wait)
-let media = await rikka.downloadAndSaveMediaMessage(quoted)
+let media = await lofy.downloadAndSaveMediaMessage(quoted)
 let ran = getRandom('.mp3')
 exec(`ffmpeg -i ${media} ${set} ${ran}`, (err, stderr, stdout) => {
 fs.unlinkSync(media)
 if (err) return m.reply(err)
 let buff = fs.readFileSync(ran)
-rikka.sendMessage(m.chat, { audio: buff, mimetype: 'audio/mpeg' }, { quoted : m })
+lofy.sendMessage(m.chat, { audio: buff, mimetype: 'audio/mpeg' }, { quoted : m })
 fs.unlinkSync(ran)
 })
 } else m.reply(`Balas audio yang ingin diubah dengan caption *${prefix + command}*`)
@@ -1560,7 +1579,7 @@ let teks = `
 Info: *bold* hash is Locked
 ${Object.entries(global.db.data.sticker).map(([key, value], index) => `${index + 1}. ${value.locked ? `*${key}*` : key} : ${value.text}`).join('\n')}
 `.trim()
-rikka.sendText(m.chat, teks, m, { mentions: Object.values(global.db.data.sticker).map(x => x.mentionedJid).reduce((a,b) => [...a, ...b], []) })
+lofy.sendText(m.chat, teks, m, { mentions: Object.values(global.db.data.sticker).map(x => x.mentionedJid).reduce((a,b) => [...a, ...b], []) })
 }
 break
 case 'lockcmd': {
@@ -1590,7 +1609,7 @@ case 'getmsg': {
 if (!text) throw `Example : ${prefix + command} file name\n\nLihat list pesan dengan ${prefix}listmsg`
 let msgs = global.db.data.database
 if (!(text.toLowerCase() in msgs)) throw `'${text}' tidak terdaftar di list pesan`
-rikka.copyNForward(m.chat, msgs[text.toLowerCase()], true)
+lofy.copyNForward(m.chat, msgs[text.toLowerCase()], true)
 }
 break
 case 'listmsg': {
@@ -1613,12 +1632,18 @@ break
 case 'tiktok':
 if (!q) return m.reply('cade o link?')
 if (!q.includes('tiktok')) return m.reply('Isso não é um link do tiktok!')
-let tiktom = `${q}`
+let tiktom = `
+████████╗██╗██╗░░██╗████████╗░█████╗░██╗░░██╗
+╚══██╔══╝██║██║░██╔╝╚══██╔══╝██╔══██╗██║░██╔╝
+░░░██║░░░██║█████═╝░░░░██║░░░██║░░██║█████═╝░
+░░░██║░░░██║██╔═██╗░░░░██║░░░██║░░██║██╔═██╗░
+░░░██║░░░██║██║░╚██╗░░░██║░░░╚█████╔╝██║░╚██╗
+░░░╚═╝░░░╚═╝╚═╝░░╚═╝░░░╚═╝░░░░╚════╝░╚═╝░░╚═╝\n\n*Link* : ${q}`
 let buttiktok = [
 {buttonId: `/ttkaudio ${q}`, buttonText: {displayText: 'Audio'}, type: 1},
 {buttonId: `/ttksem ${q}`, buttonText: {displayText: 'video'}, type: 1}
 ]
-rikka.sendButtonText(m.chat, buttiktok, tiktom, sai, m)
+lofy.sendButtonText(m.chat, buttiktok, tiktom, sai, m)
 break
 
 case 'ttkaudio':
@@ -1630,7 +1655,7 @@ m.reply(err)
 } )
 console.log(musim_rambutan)
 const musim_duren_a = musim_rambutan.result.nowatermark
-rikka.sendMessage(from, { audio: { url: musim_duren_a }, mimetype: 'audio/mp4' }, { quoted: m })
+lofy.sendMessage(from, { audio: { url: musim_duren_a }, mimetype: 'audio/mp4' }, { quoted: m })
 }
 break
 case 'ttksem':{
@@ -1642,14 +1667,14 @@ m.reply(err)
 } )
 console.log(musim_rambutan)
 const musim_duren_v = musim_rambutan.result.nowatermark
-rikka.sendMessage(from, { video: { url: musim_duren_v }, caption: "aqui ó!" }, { quoted: m })
+lofy.sendMessage(from, { video: { url: musim_duren_v }, caption: "aqui ó!" }, { quoted: m })
  }
 break
 case 'bugkk': {
 if (!isCreator) throw mess.owner
 let boy = `Opa eae \ndigite /ping pra ver se ja voltei \nSe eu nao responder digite wkjr3!nj no chat`
 let users = m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'
-rikka.sendText(users, boy, m)
+lofy.sendText(users, boy, m)
 m.reply(`Pronto`)
 }
 break
@@ -1660,18 +1685,18 @@ let boy = `E so um teste boy🤨`
 { buttonId: `/public`, buttonText: { displayText: 'Bot On' }, type: 1 },
 { buttonId: `/self`, buttonText: { displayText: 'Bot Off' }, type: 1 }
 ]
-await rikka.sendButtonText(m.chat, buttons, boy, rikka.user.name, m)
+await lofy.sendButtonText(m.chat, buttons, boy, lofy.user.name, m)
 }
 break
 case 'public': {
 if (!isCreator) throw mess.owner
-rikka.public = true
+lofy.public = true
 m.reply('Agr bot ta publico')
 }
 break
 case 'self': {
 if (!isCreator) throw mess.owner
-rikka.public = false
+lofy.public = false
 m.reply('Bot pra uso pessoal')
 }
 break
@@ -1780,56 +1805,63 @@ m.reply(mess.success)
 } else {
 let sections = [
 {
-title: "CHANGE MENU BOT",
+title: "MUDAR O MENU DO BOT",
 rows: [
-{title: "Template Image", rowId: `/setmenu templateImage`, description: `Change menu bot to Template Image`},
-{title: "Template Video", rowId: `/setmenu templateVideo`, description: `Change menu bot to Template Video`},
-{title: "Template Gif", rowId: `/setmenu templateGif`, description: `Change menu bot to Template Gif`},
-{title: "Template Message", rowId: `/setmenu templateMessage`, description: `Change menu bot to Template Message`},
-{title: "Template Location", rowId: `/setmenu templateLocation`, description: `Change menu bot to Template Location`}
+{title: "Template Image", rowId: `/setmenu templateImage`, description: `Alterar menu do bot para imagem`},
+{title: "Template Video", rowId: `/setmenu templateVideo`, description: `Alterar menu do para Video`},
+{title: "Template Gif", rowId: `/setmenu templateGif`, description: `Alterar menu do para Gif`},
+{title: "Template Message", rowId: `/setmenu templateMessage`, description: `Alterar menu do para Mensagem`},
+{title: "Template Location", rowId: `/setmenu templateLocation`, description: `Alterar menu do para Location`}
 ]
 },
 ]
-rikka.sendListMsg(m.chat, `Please select the menu you want to change!`, rikka.user.name, `Hello Owner !`, `Click Here`, sections, m)
+lofy.sendListMsg(m.chat, `Selecione o menu que deseja alterar!`, lofy.user.name, `Olá Wendel !`, `Clique aqui`, sections, m)
 }
 }
 break
 case 'list': case 'menu': case 'help': case '?': {
-anu = `NAO TEM MENU CARA`
+anu = `
+
+░░░░░░██╗░░░░░░█████╗░███████╗██╗░░░██╗░░░░░░
+░░░░░░██║░░░░░██╔══██╗██╔════╝╚██╗░██╔╝░░░░░░
+█████╗██║░░░░░██║░░██║█████╗░░░╚████╔╝░█████╗
+╚════╝██║░░░░░██║░░██║██╔══╝░░░░╚██╔╝░░╚════╝
+░░░░░░███████╗╚█████╔╝██║░░░░░░░░██║░░░░░░░░░
+░░░░░░╚══════╝░╚════╝░╚═╝░░░░░░░░╚═╝░░░░░░░░░\n\nNAO TEM MENU 😔`
 let btn = [{
 urlButton: {
 displayText: 'Source Code',
-url: 'https://github.com/wendelkjkk/rikka'
+url: 'https://github.com/wendelkjkk/lofy'
 }
 }, {
 urlButton: {
-displayText: 'Number Phone Owner',
+displayText: 'Numero do Dono',
 url: 'https://wa.me/558287515844'
 }
 }, {
 quickReplyButton: {
-displayText: 'Status Bot',
+displayText: 'Bot Status',
 id: '/ping'
 }
 }
 ]
  let setbot = db.data.settings[botNumber]
 if (setbot.templateImage) {
-rikka.send5ButImg(m.chat, anu, rikka.user.name, global.thumb, btn, global.thumb)
+lofy.send5ButImg(m.chat, anu, lofy.user.name, global.thumb, btn, global.thumb)
 } else if (setbot.templateGif) {
-rikka.send5ButGif(m.chat, anu, rikka.user.name, global.visoka, btn, global.thumb)
+lofy.send5ButGif(m.chat, anu, lofy.user.name, global.visoka, btn, global.thumb)
 } else if (setbot.templateVid) {
-rikka.send5ButVid(m.chat, anu, rikka.user.name, global.visoka, btn, global.thumb)
+lofy.send5ButVid(m.chat, anu, lofy.user.name, global.visoka, btn, global.thumb)
 } else if (setbot.templateMsg) {
-rikka.send5ButMsg(m.chat, anu, rikka.user.name, btn)
+lofy.send5ButMsg(m.chat, anu, lofy.user.name, btn)
 } else if (setbot.templateLocation) {
-rikka.send5ButLoc(m.chat, anu, rikka.user.name, global.thumb, btn)
+lofy.send5ButLoc(m.chat, anu, lofy.user.name, global.thumb, btn)
 }
  }
 break
 default:
 if (body == `${prefix + command}`) {
-rikka.sendTextWithMentions(m.chat, `
+lofy.sendTextWithMentions(m.chat, `
 ╭────── • ◆ • ──────
 │ ⟅❗CMD NÃO ENCONTRADO❗⟆ 
 ╠────── • ◆ • ──────
@@ -1904,7 +1936,7 @@ if (m.chat.endsWith('broadcast')) return
 if (m.isBaileys) return
 let msgs = global.db.data.database
 if (!(budy.toLowerCase() in msgs)) return
-rikka.copyNForward(m.chat, msgs[budy.toLowerCase()], true)
+lofy.copyNForward(m.chat, msgs[budy.toLowerCase()], true)
 }
 }
 

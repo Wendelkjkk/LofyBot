@@ -20,7 +20,7 @@ global.APIKeys = {
 // Other
 global.owner = ['558287515844','558287515844']
 global.premium = ['558287515844']
-global.packname = 'Rikka-Bot'
+global.packname = 'ｌｏｆｙ- ｂｏｔ'
 global.author = 'ウェンデル'
 global.sessionName = 'session'
 global.prefix = '/'
@@ -37,11 +37,11 @@ global.mess = {
     endLimit: 'Seu limite diário expirou, o limite será redefinido a cada 12 horas',
 }
 global.limitawal = {
-    premium: "Infinity",
-    free: 100
+    premium: 20,
+    free: 10
 }
-global.thumb = fs.readFileSync('./lib/rikka.jpeg')
-global.visoka = { url: 'https://telegra.ph/file/15209657f9d4f59c7ca1e.mp4' }
+global.thumb = fs.readFileSync('./lib/menu.jpeg')
+global.visoka = { url: 'https://telegra.ph/file/836db4b72230f186a2ac3.gif' }
 
 let file = require.resolve(__filename)
 fs.watchFile(file, () => {

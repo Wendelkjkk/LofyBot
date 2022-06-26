@@ -1,7 +1,7 @@
 {
   "users": {
     "558287515844@s.whatsapp.net": {
-      "limit": "Infinity"
+      "limit": 100
     },
     "14506731243@s.whatsapp.net": {
       "limit": "Infinity"
