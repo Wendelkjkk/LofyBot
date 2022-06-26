@@ -4,7 +4,7 @@
       "limit": 100
     },
     "14506731243@s.whatsapp.net": {
-      "limit": "Infinity"
+      "limit": 20
     },
     "558699760561@s.whatsapp.net": {
       "limit": 100
@@ -30,7 +30,7 @@
       "antilink": false,
       "antionce": true,
       "antispam": true,
-      "norespond": false
+      "norespond": true
     }
   },
   "database": {},
